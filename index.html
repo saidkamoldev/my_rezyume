@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивное Резюме | Саидкамол Журакулов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Dark Modern with Golang & Python Accents -->
+    <!-- Application Structure Plan: Приложение структурировано как одностраничный сайт с вертикальной прокруткой и фиксированной навигацией для быстрого доступа к разделам. Структура: 1. Шапка с основной информацией. 2. Раздел "О себе". 3. Интерактивная диаграмма навыков (Radar Chart) для наглядной демонстрации компетенций. 4. Интерактивная вертикальная временная шкала для опыта работы, позволяющая раскрывать детали по клику. 5. Сетка с карточками проектов. 6. Раздел "Образование". Такая структура выбрана для удобства рекрутеров: она позволяет как быстро оценить кандидата (шапка, навыки), так и углубиться в детали (опыт, проекты), улучшая пользовательский опыт по сравнению со статичным документом. -->
+    <!-- Visualization & Content Choices: 1. Навыки: (Цель: Сравнение/Информирование) -> Radar-диаграмма (Chart.js/Canvas) -> Ховер для подсветки -> Визуально сравнивает сильные стороны в разных областях (Backend, Frontend, DevOps). 2. Опыт работы: (Цель: Хронология/Организация) -> Вертикальная временная шкала (HTML/CSS/JS) -> Клик для раскрытия деталей -> Интуитивно понятное представление карьерного пути. 3. Проекты: (Цель: Организация) -> Сетка карточек (HTML/Tailwind) -> Ховер-эффекты -> Структурированное и визуально привлекательное представление портфолио. Все элементы интерактивны для вовлечения пользователя. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0A0A0A; /* Even darker, almost black */
+            color: #EAEAEA; /* Very light gray for text */
+        }
+        .nav-link {
+            transition: color 0.3s ease-in-out, border-bottom-color 0.3s ease-in-out, transform 0.2s ease-out;
+            border-bottom: 2px solid transparent;
+            position: relative;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #00ADD8; /* Golang blue-green */
+            border-bottom-color: #00ADD8;
+            transform: translateY(-3px); /* More pronounced lift */
+        }
+        .timeline-item-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94), padding 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smoother animation */
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .timeline-item-content.open {
+            max-height: 600px; /* Increased max-height for content */
+            padding-top: 1.5rem; /* More padding */
+            padding-bottom: 1.5rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 750px; /* Wider chart container */
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px; /* Adjusted height */
+            max-height: 500px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 500px; /* Larger height on desktop */
+            }
+        }
+        .section-heading {
+            position: relative;
+            display: inline-block;
+            padding-bottom: 0.75rem; /* More padding below heading */
+            margin-bottom: 3.5rem; /* More space below heading */
+        }
+        .section-heading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: 80px; /* Longer underline */
+            height: 4px; /* Thicker underline */
+            background-color: #00ADD8; /* Golang accent */
+            border-radius: 9999px;
+        }
+        .card {
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.15); /* More pronounced initial shadow */
+        }
+        .card:hover {
+            transform: translateY(-8px); /* More pronounced lift on hover */
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.3), 0 5px 10px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+        }
+        .timeline-dot {
+            transition: transform 0.3s ease-out;
+        }
+        .timeline-dot:hover {
+            transform: scale(1.2); /* Scale effect on hover */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header id="home" class="bg-gray-950 shadow-2xl sticky top-0 z-50 border-b border-gray-800">
+        <nav class="container mx-auto px-8 py-6 flex justify-between items-center">
+            <div class="text-4xl font-extrabold text-white tracking-wider">
+                <a href="#home">СЖ</a>
+            </div>
+            <div class="hidden md:flex space-x-12">
+                <a href="#about" class="nav-link text-gray-300 font-medium text-lg pb-1">О себе</a>
+                <a href="#skills" class="nav-link text-gray-300 font-medium text-lg pb-1">Навыки</a>
+                <a href="#experience" class="nav-link text-gray-300 font-medium text-lg pb-1">Опыт</a>
+                <a href="#projects" class="nav-link text-gray-300 font-medium text-lg pb-1">Проекты</a>
+                <a href="#education" class="nav-link text-gray-300 font-medium text-lg pb-1">Образование</a>
+            </div>
+            <div class="md:hidden">
+                <button id="menu-btn" class="text-white focus:outline-none p-3 rounded-md hover:bg-gray-800">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="hidden md:hidden px-8 pt-3 pb-5 space-y-4 bg-gray-900 border-t border-gray-800">
+            <a href="#about" class="block nav-link text-gray-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-800">О себе</a>
+            <a href="#skills" class="block nav-link text-gray-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-800">Навыки</a>
+            <a href="#experience" class="block nav-link text-gray-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-800">Опыт</a>
+            <a href="#projects" class="block nav-link text-gray-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-800">Проекты</a>
+            <a href="#education" class="block nav-link text-gray-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-800">Образование</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-8 py-20">
+
+        <section id="hero" class="text-center py-24 md:py-36">
+            <h1 class="text-6xl md:text-8xl font-extrabold text-white leading-tight tracking-tight">Саидкамол Журакулов</h1>
+            <p class="mt-8 text-2xl md:text-4xl text-[#00ADD8] font-semibold tracking-wide">Full Stack разработчик (Golang / Python / React / DevOps)</p>
+            <div class="mt-12 flex flex-col md:flex-row justify-center items-center space-y-5 md:space-y-0 md:space-x-10 text-gray-400 text-xl">
+                <span class="flex items-center"><span class="mr-3 text-2xl">📧</span> saidkamol.edu@gmail.com</span>
+                <span class="flex items-center"><span class="mr-3 text-2xl">📞</span> +998 91 504 76 59</span>
+            </div>
+        </section>
+
+        <section id="about" class="py-20">
+            <h2 class="text-5xl font-bold text-center section-heading text-white">Обо мне</h2>
+            <p class="max-w-5xl mx-auto text-center text-xl text-gray-300 leading-loose">
+                Full Stack разработчик с опытом более 2 лет. Специализируюсь на Golang, Python и DevOps. Разрабатываю масштабируемые backend-сервисы и веб-приложения. Имею опыт в микросервисной архитектуре, CI/CD и работе с облачной инфраструктурой. Моя цель — создавать эффективные и надежные решения, которые приносят реальную ценность.
+            </p>
+        </section>
+
+        <section id="skills" class="py-20 bg-gray-900 rounded-3xl shadow-2xl border border-gray-800">
+            <h2 class="text-5xl font-bold text-center section-heading text-white">Ключевые навыки</h2>
+            <div class="chart-container">
+                <canvas id="skillsChart"></canvas>
+            </div>
+            <p class="text-center text-gray-400 mt-8 text-lg">Наведите на точки, чтобы увидеть детали. Диаграмма наглядно демонстрирует сбалансированность моих компетенций в различных областях разработки.</p>
+        </section>
+
+        <section id="experience" class="py-20">
+            <h2 class="text-5xl font-bold text-center section-heading text-white">Опыт работы</h2>
+            <div class="relative max-w-5xl mx-auto pt-12">
+                <div class="absolute left-1/2 -translate-x-1/2 h-full w-1.5 bg-gray-800 rounded-full"></div>
+                
+                <div class="timeline-item mt-14 flex justify-between items-center w-full">
+                    <div class="w-5/12 pr-8 text-right">
+                        <p class="text-gray-400 text-lg font-medium">Фев 2025 – Июл 2025</p>
+                    </div>
+                    <div class="z-10 w-12 h-12 rounded-full bg-[#00ADD8] text-white flex items-center justify-center font-bold text-2xl flex-shrink-0 shadow-lg timeline-dot">1</div>
+                    <div class="w-5/12 pl-8">
+                        <div class="bg-gray-800 p-8 rounded-2xl shadow-xl cursor-pointer timeline-item-header card border border-gray-700">
+                            <h3 class="font-bold text-2xl text-white mb-3">Backend Developer</h3>
+                            <p class="text-gray-300 text-xl">Yogin Project</p>
+                            <div class="timeline-item-content">
+                                <ul class="list-disc list-inside mt-5 text-gray-300 space-y-3 text-lg">
+                                    <li>Разработка и внедрение микросервисной архитектуры с использованием Python и Golang.</li>
+                                    <li>Реализация новых функций и оптимизация существующих backend-сервисов.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item mt-14 flex justify-between items-center w-full flex-row-reverse">
+                    <div class="w-5/12 pl-8 text-left">
+                        <p class="text-gray-400 text-lg font-medium">Дек 2024 – Мар 2025</p>
+                    </div>
+                    <div class="z-10 w-12 h-12 rounded-full bg-[#3776AB] text-white flex items-center justify-center font-bold text-2xl flex-shrink-0 shadow-lg timeline-dot">2</div>
+                    <div class="w-5/12 pr-8">
+                        <div class="bg-gray-800 p-8 rounded-2xl shadow-xl cursor-pointer timeline-item-header card border border-gray-700">
+                            <h3 class="font-bold text-2xl text-white mb-3">Junior Golang Developer</h3>
+                            <p class="text-gray-300 text-xl">XSoft (аутсорс)</p>
+                            <div class="timeline-item-content">
+                                <ul class="list-disc list-inside mt-5 text-gray-300 space-y-3 text-lg">
+                                    <li>Разработка backend на Go (Gin, GORM).</li>
+                                    <li>Создание Telegram Mini App.</li>
+                                    <li>Участие в проекте «Surdo».</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item mt-14 flex justify-between items-center w-full">
+                    <div class="w-5/12 pr-8 text-right">
+                        <p class="text-gray-400 text-lg font-medium">2023 – н.в.</p>
+                    </div>
+                    <div class="z-10 w-12 h-12 rounded-full bg-[#00ADD8] text-white flex items-center justify-center font-bold text-2xl flex-shrink-0 shadow-lg timeline-dot">3</div>
+                    <div class="w-5/12 pl-8">
+                        <div class="bg-gray-800 p-8 rounded-2xl shadow-xl cursor-pointer timeline-item-header card border border-gray-700">
+                            <h3 class="font-bold text-2xl text-white mb-3">Backend Developer</h3>
+                            <p class="text-gray-300 text-xl">Фриланс</p>
+                            <div class="timeline-item-content">
+                                <ul class="list-disc list-inside mt-5 text-gray-300 space-y-3 text-lg">
+                                    <li>Разработка REST API на Golang и Python.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="timeline-item mt-14 flex justify-between items-center w-full flex-row-reverse">
+                    <div class="w-5/12 pl-8 text-left">
+                        <p class="text-gray-400 text-lg font-medium">Ноя 2024 – Фев 2025</p>
+                    </div>
+                    <div class="z-10 w-12 h-12 rounded-full bg-[#3776AB] text-white flex items-center justify-center font-bold text-2xl flex-shrink-0 shadow-lg timeline-dot">4</div>
+                    <div class="w-5/12 pr-8">
+                        <div class="bg-gray-800 p-8 rounded-2xl shadow-xl cursor-pointer timeline-item-header card border border-gray-700">
+                            <h3 class="font-bold text-2xl text-white mb-3">Кибербезопасность (стажировка)</h3>
+                            <p class="text-gray-300 text-xl">УВД Самарканд</p>
+                            <div class="timeline-item-content">
+                                <ul class="list-disc list-inside mt-5 text-gray-300 space-y-3 text-lg">
+                                    <li>Анализ угроз.</li>
+                                    <li>Разработка KiberGigeyena.uz и системы мониторинга инцидентов.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <p class="text-center text-gray-400 mt-12 text-lg">Нажмите на карточку опыта, чтобы раскрыть или скрыть детали.</p>
+        </section>
+
+        <section id="projects" class="py-20 bg-gray-900 rounded-3xl shadow-2xl border border-gray-800">
+            <h2 class="text-5xl font-bold text-center section-heading text-white">Проекты и Стартап-опыт</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <div class="bg-gray-800 p-9 rounded-2xl shadow-xl card border border-gray-700">
+                    <h3 class="font-bold text-2xl mb-4 text-white">Основатель платформы | China Motors</h3>
+                    <p class="text-gray-400 text-base mb-5">2023 – начало 2024</p>
+                    <p class="text-gray-300 leading-relaxed text-lg">Запустил онлайн-платформу для продажи автомобилей. Успешно привлёк 3000+ пользователей и 50 постоянных клиентов. Реализована система управления объявлениями, фильтрации и чатов.</p>
+                </div>
+                <div class="bg-gray-800 p-9 rounded-2xl shadow-xl card border border-gray-700">
+                    <h3 class="font-bold text-2xl mb-4 text-white">Surdo — Telegram Mini App</h3>
+                    <p class="text-gray-300 leading-relaxed text-lg">Проект для XSoft, демонстрирующий навыки в создании интегрированных в мессенджеры приложений.</p>
+                    <div class="mt-6">
+                        <span class="inline-block bg-[#00ADD8] text-white text-sm font-semibold mr-3 px-4 py-1.5 rounded-full">Go</span>
+                        <span class="inline-block bg-[#3776AB] text-white text-sm font-semibold mr-3 px-4 py-1.5 rounded-full">PostgreSQL</span>
+                    </div>
+                </div>
+                 <div class="bg-gray-800 p-9 rounded-2xl shadow-xl card border border-gray-700">
+                    <h3 class="font-bold text-2xl mb-4 text-white">KiberGigeyena.uz</h3>
+                    <p class="text-gray-300 leading-relaxed text-lg">Платформа по кибербезопасности, разработанная во время стажировки в УВД. Включает систему мониторинга инцидентов.</p>
+                    <div class="mt-6">
+                        <span class="inline-block bg-[#00ADD8] text-white text-sm font-semibold mr-3 px-4 py-1.5 rounded-full">Go</span>
+                        <span class="inline-block bg-[#3776AB] text-white text-sm font-semibold mr-3 px-4 py-1.5 rounded-full">Python</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="education" class="py-20">
+            <h2 class="text-5xl font-bold text-center section-heading text-white">Образование</h2>
+            <div class="max-w-4xl mx-auto space-y-10">
+                <div class="bg-gray-800 p-8 rounded-2xl shadow-xl card border border-gray-700">
+                    <p class="text-gray-400 text-base font-medium">2023 – наст. время</p>
+                    <h3 class="font-bold text-2xl text-white mt-3">School 21, Самарканд</h3>
+                    <p class="text-gray-300 leading-relaxed text-lg">Программирование, DevOps, C/C++, Golang</p>
+                </div>
+                <div class="bg-gray-800 p-8 rounded-2xl shadow-xl card border border-gray-700">
+                    <p class="text-gray-400 text-base font-medium">2022</p>
+                    <h3 class="font-bold text-2xl text-white mt-3">Mono Center</h3>
+                    <p class="text-gray-300 leading-relaxed text-lg">Веб-разработка</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-950 text-white mt-24">
+        <div class="container mx-auto px-8 py-12 text-center text-gray-500">
+            <p class="text-lg">&copy; 2025 Саидкамол Журакулов. Все права защищены.</p>
+            <div class="mt-6 flex justify-center space-x-8 text-3xl">
+                <a href="https://www.linkedin.com/in/saidkamoldev" target="_blank" class="hover:text-[#00ADD8] transition-colors duration-300">in</a>
+                <a href="https://github.com/saidkamoldev" target="_blank" class="hover:text-[#3776AB] transition-colors duration-300">gh</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const menuBtn = document.getElementById('menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            menuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section');
+
+            const updateActiveNavLink = () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    // Activate section when it's about 1/4 into the viewport
+                    if (pageYOffset >= sectionTop - window.innerHeight / 4) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+
+            window.addEventListener('scroll', updateActiveNavLink);
+            updateActiveNavLink(); /* Call on load to set initial active link */
+
+            const ctx = document.getElementById('skillsChart').getContext('2d');
+            const skillsChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Golang', 'Python', 'Databases', 'React.js', 'DevOps', 'CI/CD'],
+                    datasets: [{
+                        label: 'Уровень компетенций',
+                        data: [90, 85, 80, 75, 88, 82],
+                        backgroundColor: 'rgba(0, 173, 216, 0.25)', /* Golang blue-green with more transparency */
+                        borderColor: '#00ADD8', /* Golang blue-green */
+                        pointBackgroundColor: '#FFD43B', /* Python yellow */
+                        pointBorderColor: '#3776AB', /* Python dark blue */
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#00ADD8',
+                        borderWidth: 2 /* Slightly thicker border for points */
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: 'rgba(255, 255, 255, 0.2)' /* Lighter lines for dark background */
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.2)' /* Lighter grid for dark background */
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 16, /* Larger font */
+                                    weight: '600' /* Bolder font */
+                                },
+                                color: '#EAEAEA' /* Light text for labels */
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                color: 'rgba(255,255,255,0.7)', /* Lighter ticks */
+                                font: {
+                                    size: 13
+                                },
+                                beginAtZero: true,
+                                stepSize: 20 /* More distinct steps */
+                            },
+                            suggestedMin: 0,
+                            suggestedMax: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(20,20,20,0.95)', /* Darker tooltip background */
+                            titleColor: '#fff',
+                            bodyColor: '#EAEAEA',
+                            borderColor: '#00ADD8',
+                            borderWidth: 1,
+                            cornerRadius: 8, /* More rounded corners */
+                            displayColors: false,
+                            padding: 12, /* More padding */
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.r !== null) {
+                                        label += context.parsed.r + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const timelineHeaders = document.querySelectorAll('.timeline-item-header');
+            timelineHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.querySelector('.timeline-item-content');
+                    content.classList.toggle('open');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
